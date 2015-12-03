@@ -3,11 +3,13 @@
 #include <math.h>
 #include <omp.h>
 
+// structure for storing data point and distance together
 typedef struct {
         int p;
         double dist;
 } Distance;
 
+// generate Distance array for data point at idx
 Distance * ptrdist (double * dist, int count, int idx) {
         Distance * d = (Distance *) malloc (sizeof(Distance) * count);
         int i = 0;
@@ -19,6 +21,7 @@ Distance * ptrdist (double * dist, int count, int idx) {
         return d;
 }
 
+// comparison function for qsort use
 int comparator (const void * v1, const void * v2) {
         const Distance * d1 = (Distance *) v1;
         const Distance * d2 = (Distance *) v2;
@@ -50,6 +53,7 @@ int main (int argc, char * argv []) {
         int i, j, k; // indice variables
         int out = fscanf (fd, "%d %d\n", &count, &dim);
 
+        // check if file reading has problem
         if (out == EOF) {
                 fputs ("File reading error. Process terminates.", stderr);
                 return -1;
@@ -114,6 +118,7 @@ int main (int argc, char * argv []) {
                 for (j = 1; j < K + 1; j++) {
                         printf ("Point [%d] Neighbor [%d] Distance [%f]\n",i, d[j].p, d[j].dist);
                 }
+                free (d);
                 printf ("\n");
         }
 
