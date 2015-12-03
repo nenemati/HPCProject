@@ -92,17 +92,45 @@ int main (int argc, char * argv []) {
         double * dismat = (double *) malloc (count * count * sizeof(double));
 
         // calculate the distance between every two data points. takes n * n * m time
+        // this is the most time consuming part. need to be improved.
+        /*#pragma omp parallel for
         for (i = 0; i < count; i++) {
 
+                printf ("Calculating distances around point [%d]\n", i);
+                double dist = 0.0;
+                int d = 0;
                 #pragma omp parallel for
                 for (j = 0; j < count; j++) {
-                        double dist = 0.0;
+                        dist = 0.0;
 
-                        //#pragma omp parallel for
+                        #pragma omp parallel for
                         for (k = 0; k < dim; k++) {
-                                int d = data [i * dim + k] - data [j * dim + k];
+                                d = data [i * dim + k] - data [j * dim + k];
 
-                                //#pragma omp critical
+                                #pragma omp critical
+                                {
+                                        dist += d * d;
+                                }
+                        }
+                        dist = sqrt (dist);
+                        dismat [i * count + j] = dist;
+                }
+        }*/
+        #pragma omp parallel for
+        for (i = 0; i < count - 1; i++) {
+
+                //printf ("Calculating distances around point [%d]\n", i);
+                double dist = 0.0;
+                int d = 0;
+                #pragma omp parallel for
+                for (j = i + 1; j < count; j++) {
+                        dist = 0.0;
+
+                        #pragma omp parallel for
+                        for (k = 0; k < dim; k++) {
+                                d = data [i * dim + k] - data [j * dim + k];
+
+                                #pragma omp critical
                                 {
                                         dist += d * d;
                                 }
@@ -111,6 +139,13 @@ int main (int argc, char * argv []) {
                         dismat [i * count + j] = dist;
                 }
         }
+
+	for (i = 1; i < count; i++) {
+                for (j = 0; j < i; j++) {
+                        dismat [i * count + j] = dismat [j * count + i];
+                }
+	}
+
 
         printf ("Distance matrix complete.\n");
 
@@ -125,15 +160,15 @@ int main (int argc, char * argv []) {
                 printf ("\n");
         }
 
-        /*
-        //print distance matrix, for validation use only
+
+        /*print distance matrix, for validation use only
         for (i = 0; i < count; i++) {
                 for (j = 0; j < count; j++) {
                         printf ("%f ", dismat [i * count + j]);
                 }
                 printf ("\n");
-        }
-        */
+        }*/
+
 
         free (data);
         free (dismat);
