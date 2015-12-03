@@ -74,6 +74,7 @@ int main (int argc, char * argv []) {
 
 
         fclose (fd);
+        printf ("File reading complete.\n");
 
         /*
         // print out data, For validation use only
@@ -97,11 +98,11 @@ int main (int argc, char * argv []) {
                 for (j = 0; j < count; j++) {
                         double dist = 0.0;
 
-                        #pragma omp parallel for
+                        //#pragma omp parallel for
                         for (k = 0; k < dim; k++) {
                                 int d = data [i * dim + k] - data [j * dim + k];
 
-                                #pragma omp critical
+                                //#pragma omp critical
                                 {
                                         dist += d * d;
                                 }
@@ -110,6 +111,8 @@ int main (int argc, char * argv []) {
                         dismat [i * count + j] = dist;
                 }
         }
+
+        printf ("Distance matrix complete.\n");
 
         // for each points, find the nearest points
         for (i = 0; i < count; i++) {

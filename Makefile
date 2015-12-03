@@ -6,13 +6,16 @@ JC = javac
 CFLAGS = -g -Wall -O3 -lm -fopenmp
 JFLAGS = -d bin/
 
-all: bin/main bin/DataGenerator.class
+all: bin/main bin/DataGenerator.class bin/dgen
 
 bin/main: main.c
 	$(CC) main.c $(CFLAGS) -o bin/main
 
 bin/DataGenerator.class: DataGenerator.java
 	$(JC) DataGenerator.java $(JFLAGS)
+
+bin/dgen: dgen.c
+	$(CC) dgen.c -o bin/dgen
 
 clean:
 	$(RM) *.o *~ bin/*
