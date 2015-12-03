@@ -9,7 +9,7 @@ int main (int argc, char * argv []) {
 
         if (argc != 4) {
                 printf ("\nUsage:");
-                printf ("$ ./dgen [# data points] [# dimensions] [maxium value]");
+                printf ("$ ./dgen [# data points] [# dimensions] [maxium value]\n");
                 return -1;
         }
 
