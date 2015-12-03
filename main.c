@@ -3,74 +3,131 @@
 #include <math.h>
 #include <omp.h>
 
+typedef struct {
+        int p;
+        double dist;
+} Distance;
+
+Distance * ptrdist (double * dist, int count, int idx) {
+        Distance * d = (Distance *) malloc (sizeof(Distance) * count);
+        int i = 0;
+        #pragma omp parallel for
+        for (i = 0; i < count; i++) {
+                d[i].p = i;
+                d[i].dist = dist[count * idx + i];
+        }
+        return d;
+}
+
+int comparator (const void * v1, const void * v2) {
+        const Distance * d1 = (Distance *) v1;
+        const Distance * d2 = (Distance *) v2;
+        if (d1->dist > d2->dist) {
+                return 1;
+        } else if (d1->dist < d2->dist) {
+                return -1;
+        } else {
+                return 0;
+        }
+}
+
 int main (int argc, char * argv []) {
 
-    // check if command-line argument matches.
-    if (argc != 2) {
-        printf ("\nUsage:\n");
-        printf ("$ ./main [file path]\n\n");
-        return -1;
-    }
 
-    printf ("Input file: %s\n", argv[1]);
-    FILE * fd = fopen (argv[1], "r");
-
-    // first line contains number of data and dimension
-    int count, dim;
-    int out = fscanf (fd, "%d %d\n", &count, &dim);
-
-    printf ("Size=%d Dim=%d\n", count, dim);
-
-    int * data = (int *) malloc (count * dim * sizeof (int));
-    int i, j, k; // indice variables
-    for (i = 0; i < count; i++) {
-        for (j = 0; j < dim - 1; j++) {
-            out = fscanf (fd, "%d ", &data[i * dim + j]);
+        // check if command-line argument matches.
+        if (argc != 3) {
+                printf ("\nUsage:\n");
+                printf ("$ ./main [file path] [k]\n\n");
+                return -1;
         }
-        j = dim - 1;
-        out = fscanf (fd, "%d\n", &data[i * dim + j]);
-    }
 
+        // verify input file
+        printf ("Input file: %s\n", argv[1]);
+        FILE * fd = fopen (argv[1], "r");
+        int K = atoi (argv[2]);
 
-    fclose (fd);
-    /*
-    For validation use only
+        int count, dim;  // first line contains number of data and dimension
+        int i, j, k; // indice variables
+        int out = fscanf (fd, "%d %d\n", &count, &dim);
 
-    for (i = 0; i < count; i++) {
-        for (j = 0; j < dim - 1; j++) {
-            printf ("%d ", data[i * dim + j]);
+        if (out == EOF) {
+                fputs ("File reading error. Process terminates.", stderr);
+                return -1;
         }
-        j = dim - 1;
-        printf ("%d\n", data [i * dim + j]);
-    }*/
 
-    // dimmensional matrix, keeps the distance between every two points
-    double * dimmat = (double *) malloc (count * count * sizeof(double));
+        printf ("Size=%d Dim=%d\n", count, dim); // verify dimension and count
 
-    // calculate the distance between every two data points. takes n * n * m time
-    for (i = 0; i < count; i++) {
-        #pragma omp parallel for
-        for (j = 0; j < count; j++) {
-            double dist = 0.0;
-            for (k = 0; k < dim; k++) {
-                int d = data [i * dim + k] - data [j * dim + k];
-                dist += d * d;
-            }
-            dist = sqrt (dist);
-            dimmat [i * count + j] = dist;
+        int * data = (int *) malloc (count * dim * sizeof (int)); // allocate memory
+
+        // read data file into array
+        for (i = 0; i < count; i++) {
+                for (j = 0; j < dim - 1; j++) {
+                        out = fscanf (fd, "%d ", &data[i * dim + j]);
+                }
+                j = dim - 1;
+                out = fscanf (fd, "%d\n", &data[i * dim + j]);
         }
-    }
 
 
-    // For validation use only
-    for (i = 0; i < count; i++) {
-        for (j = 0; j < count; j++) {
-            printf ("%f ", dimmat [i * count + j]);
+        fclose (fd);
+
+        /*
+        // print out data, For validation use only
+        puts ("\n[Data]");
+        for (i = 0; i < count; i++) {
+                for (j = 0; j < dim - 1; j++) {
+                        printf ("%d ", data[i * dim + j]);
+                }
+                j = dim - 1;
+                printf ("%d\n", data [i * dim + j]);
         }
-        printf ("\n");
-    }
+        */
 
-    free (data);
-    free (dimmat);
-    return 0;
+        // distance matrix, keeps the distance between every two points
+        double * dismat = (double *) malloc (count * count * sizeof(double));
+
+        // calculate the distance between every two data points. takes n * n * m time
+        for (i = 0; i < count; i++) {
+
+                #pragma omp parallel for
+                for (j = 0; j < count; j++) {
+                        double dist = 0.0;
+
+                        #pragma omp parallel for
+                        for (k = 0; k < dim; k++) {
+                                int d = data [i * dim + k] - data [j * dim + k];
+
+                                #pragma omp critical
+                                {
+                                        dist += d * d;
+                                }
+                        }
+                        dist = sqrt (dist);
+                        dismat [i * count + j] = dist;
+                }
+        }
+
+        // for each points, find the nearest points
+        for (i = 0; i < count; i++) {
+                Distance * d = ptrdist (dismat, count, i);
+                qsort (d, count, sizeof(Distance), comparator);
+                for (j = 1; j < K + 1; j++) {
+                        printf ("Point [%d] Neighbor [%d] Distance [%f]\n",i, d[j].p, d[j].dist);
+                }
+                printf ("\n");
+        }
+
+        /*
+        //print distance matrix, for validation use only
+        for (i = 0; i < count; i++) {
+                for (j = 0; j < count; j++) {
+                        printf ("%f ", dismat [i * count + j]);
+                }
+                printf ("\n");
+        }
+        */
+
+        free (data);
+        free (dismat);
+        return 0;
 }
