@@ -3,6 +3,8 @@
 #include <math.h>
 #include <omp.h>
 
+#include "my_timer.h"
+
 // structure for storing data point and distance together
 typedef struct {
         int p;
@@ -116,21 +118,26 @@ int main (int argc, char * argv []) {
                         dismat [i * count + j] = dist;
                 }
         }*/
+
+        double calc_time = 0.0;
+        double copy_time = 0.0;
+        myTimer_t t = getTimeStamp ();
         #pragma omp parallel for
         for (i = 0; i < count - 1; i++) {
 
                 //printf ("Calculating distances around point [%d]\n", i);
                 double dist = 0.0;
                 int d = 0;
-                #pragma omp parallel for
+
+                //#pragma omp parallel for
                 for (j = i + 1; j < count; j++) {
                         dist = 0.0;
 
-                        #pragma omp parallel for
+                        //#pragma omp parallel for
                         for (k = 0; k < dim; k++) {
                                 d = data [i * dim + k] - data [j * dim + k];
 
-                                #pragma omp critical
+                                //#pragma omp critical
                                 {
                                         dist += d * d;
                                 }
@@ -139,29 +146,40 @@ int main (int argc, char * argv []) {
                         dismat [i * count + j] = dist;
                 }
         }
+        calc_time = getElapsedTime (t, getTimeStamp());
 
+        t = getTimeStamp ();
+        //#pragma omp parallel for
 	for (i = 1; i < count; i++) {
                 for (j = 0; j < i; j++) {
                         dismat [i * count + j] = dismat [j * count + i];
                 }
 	}
+        copy_time = getElapsedTime (t, getTimeStamp());
 
-
+        printf ("Distance Matrix Calc Time: %f\n", calc_time);
+        printf ("Distance Matrix Copy Time: %f\n", copy_time);
         printf ("Distance matrix complete.\n");
 
+        double seek_time = 0.0;
+        t = getTimeStamp ();
         // for each points, find the nearest points
+        //#pragma omp parallel for
         for (i = 0; i < count; i++) {
                 Distance * d = ptrdist (dismat, count, i);
                 qsort (d, count, sizeof(Distance), comparator);
-                for (j = 1; j < K + 1; j++) {
-                        printf ("Point [%d] Neighbor [%d] Distance [%f]\n",i, d[j].p, d[j].dist);
-                }
+                //for (j = 1; j < K + 1; j++) {
+                        //printf ("Point [%d] Neighbor [%d] Distance [%f]\n",i, d[j].p, d[j].dist);
+                //}
                 free (d);
-                printf ("\n");
+                //printf ("\n");
         }
 
+        seek_time = getElapsedTime(t, getTimeStamp()) / (count * 1.0);
+        printf ("Average Seeking Time: %f\n", seek_time);
 
-        /*print distance matrix, for validation use only
+        /*
+        //print distance matrix, for validation use only
         for (i = 0; i < count; i++) {
                 for (j = 0; j < count; j++) {
                         printf ("%f ", dismat [i * count + j]);
